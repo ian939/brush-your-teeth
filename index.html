@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>치카치카 양치 대작전!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-10deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+        .germ-anim { animation: wiggle 1s ease-in-out infinite; }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0.8; }
+            100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+        }
+        .bubble { animation: floatUp 0.6s ease-out forwards; pointer-events: none; }
+
+        @keyframes scrub {
+            0%, 100% { transform: rotate(-45deg); }
+            50% { transform: translateX(-10px) rotate(-55deg); }
+        }
+        .scrubbing { animation: scrub 0.1s infinite; }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-anim { animation: shake 0.5s; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .combo-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        .touch-none-strict {
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .tooth { transition: background-color 1s ease, box-shadow 1s ease; }
+
+        .fever-glow {
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 30px rgba(255, 69, 0, 0.8)) !important;
+            transform: scale(1.5) !important;
+        }
+    </style>
+</head>
+<body class="bg-blue-100 h-screen w-screen overflow-hidden flex flex-col items-center justify-center font-sans touch-none-strict">
+
+    <!-- 제목 -->
+    <h1 class="text-3xl font-black text-blue-600 mb-2 drop-shadow-md">✨ 치카치카 대작전 ✨</h1>
+    
+    <!-- HUD (재화 및 상태창) -->
+    <div class="flex justify-between w-full max-w-md px-4 mb-2 font-bold text-sm sm:text-lg">
+        <div class="bg-blue-500 px-3 py-1 rounded-full shadow border-2 border-blue-700 text-white flex items-center gap-1">
+            ⭐ Lv.<span id="level-display">1</span>
+        </div>
+        <div class="bg-yellow-300 px-3 py-1 rounded-full shadow border-2 border-yellow-500 text-yellow-800 flex items-center gap-1">
+            🪙 <span id="coin-display">0</span>
+        </div>
+        <div class="bg-gray-800 px-3 py-1 rounded-full shadow border-2 border-gray-600 text-white flex items-center gap-1">
+            🦷 <span id="decay-display" class="text-red-400">0 / 3</span>
+        </div>
+    </div>
+
+    <!-- 게임 화면 컨테이너 -->
+    <div id="game-container" class="relative w-full max-w-md h-[65vh] bg-red-400 rounded-3xl shadow-2xl overflow-hidden border-8 border-pink-300 cursor-none transition-transform">
+        
+        <!-- 콤보 표시기 -->
+        <div id="combo-hud" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-40 opacity-0 pointer-events-none italic">
+            10 COMBO!
+        </div>
+
+        <!-- 입 속 배경 -->
+        <div class="absolute inset-0 bg-gradient-to-b from-red-400 via-red-600 to-red-400"></div>
+
+        <!-- 윗니 -->
+        <div class="absolute top-0 w-full flex justify-center px-2 gap-0.5" id="top-teeth">
+            <div class="tooth flex-1 h-16 bg-yellow-100 rounded-b-2xl border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-20 bg-yellow-100 rounded-b-2xl border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-24 bg-yellow-100 rounded-b-[30px] border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-28 bg-yellow-100 rounded-b-[40px] border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-28 bg-yellow-100 rounded-b-[40px] border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-24 bg-yellow-100 rounded-b-[30px] border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-20 bg-yellow-100 rounded-b-2xl border-b-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-16 bg-yellow-100 rounded-b-2xl border-b-4 border-gray-200 shadow-inner"></div>
+        </div>
+
+        <!-- 아랫니 -->
+        <div class="absolute bottom-0 w-full flex justify-center px-2 gap-0.5" id="bottom-teeth">
+            <div class="tooth flex-1 h-16 bg-yellow-100 rounded-t-2xl border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-20 bg-yellow-100 rounded-t-2xl border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-24 bg-yellow-100 rounded-t-[30px] border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-28 bg-yellow-100 rounded-t-[40px] border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-28 bg-yellow-100 rounded-t-[40px] border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-24 bg-yellow-100 rounded-t-[30px] border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-20 bg-yellow-100 rounded-t-2xl border-t-4 border-gray-200 shadow-inner"></div>
+            <div class="tooth flex-1 h-16 bg-yellow-100 rounded-t-2xl border-t-4 border-gray-200 shadow-inner"></div>
+        </div>
+
+        <!-- 세균 및 이펙트 컨테이너 -->
+        <div id="germs-container" class="absolute inset-0 pointer-events-none"></div>
+        <div id="bubbles-container" class="absolute inset-0 pointer-events-none"></div>
+        <div id="damage-container" class="absolute inset-0 pointer-events-none z-50"></div>
+
+        <!-- 칫솔 커서 -->
+        <div id="toothbrush" class="absolute pointer-events-none z-50 hidden" style="transform: translate(-50%, -50%);">
+            <div id="brush-scale" class="transition-transform duration-200">
+                <div id="brush-inner" style="transform: rotate(-45deg); transform-origin: center;">
+                    🪥
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 / 결과 / 상점 오버레이 -->
+        <div id="ui-overlay" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
+            
+            <!-- 메인 패널 -->
+            <div id="main-panel" class="bg-white p-6 rounded-3xl text-center transform transition-transform scale-100 shadow-2xl border-4 border-yellow-300 w-10/12 max-w-sm relative">
+                <div id="ui-emoji" class="text-6xl mb-2">🦷</div>
+                <h2 id="ui-title" class="text-2xl font-bold text-gray-800 mb-2">세균을 물리치자!</h2>
+                <p id="ui-desc" class="text-sm text-gray-600 mb-4">화면을 연속으로 문질러서 콤보를 쌓고<br>이빨이 썩기 전에 닦아주세요!</p>
+                
+                <div class="flex flex-col gap-3">
+                    <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg transform transition active:scale-95">
+                        양치 시작!
+                    </button>
+                    <button id="shop-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-8 rounded-full text-lg shadow border-2 border-purple-700 transform transition active:scale-95">
+                        🛒 치과 상점
+                    </button>
+                </div>
+            </div>
+
+            <!-- 상점 패널 (기본 숨김) -->
+            <div id="shop-panel" class="hidden bg-white p-6 rounded-3xl text-center shadow-2xl border-4 border-purple-300 w-10/12 max-w-sm absolute">
+                <h2 class="text-2xl font-bold text-purple-700 mb-4">🛒 치과 상점</h2>
+                <div class="bg-yellow-100 rounded-lg p-2 mb-4 text-yellow-800 font-bold border-2 border-yellow-300">
+                    보유 코인: <span id="shop-coin-display">0</span>
+                </div>
+                
+                <div class="space-y-3 mb-4 text-left">
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <div>
+                            <div class="font-bold text-gray-800">💪 파워 칫솔</div>
+                            <div class="text-xs text-gray-500">세균을 더 빨리 없앱니다 (Lv.<span id="lvl-dmg">1</span>)</div>
+                        </div>
+                        <button id="upgrade-dmg-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <div>
+                            <div class="font-bold text-gray-800">✨ 왕 칫솔</div>
+                            <div class="text-xs text-gray-500">닦는 범위가 넓어집니다 (Lv.<span id="lvl-rad">1</span>)</div>
+                        </div>
+                        <button id="upgrade-rad-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
+                    </div>
+                </div>
+                
+                <button id="close-shop-btn" class="bg-gray-400 text-white font-bold py-2 px-6 rounded-full w-full">닫기</button>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 진행도 바 -->
+    <div class="w-full max-w-md mt-4 px-4 flex gap-2 items-center">
+        <span class="text-2xl" id="progress-emoji">🦠</span>
+        <div class="bg-white rounded-full h-4 w-full shadow-inner overflow-hidden border-2 border-blue-200">
+            <div id="progress-bar" class="bg-blue-400 h-full w-0 transition-all duration-300 rounded-full"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소
+        const gameContainer = document.getElementById('game-container');
+        const germsContainer = document.getElementById('germs-container');
+        const bubblesContainer = document.getElementById('bubbles-container');
+        const damageContainer = document.getElementById('damage-container');
+        const toothbrush = document.getElementById('toothbrush');
+        const brushScale = document.getElementById('brush-scale');
+        const brushInner = document.getElementById('brush-inner');
+        const uiOverlay = document.getElementById('ui-overlay');
+        const mainPanel = document.getElementById('main-panel');
+        const shopPanel = document.getElementById('shop-panel');
+        
+        const startBtn = document.getElementById('start-btn');
+        const shopBtn = document.getElementById('shop-btn');
+        const closeShopBtn = document.getElementById('close-shop-btn');
+        const upgradeDmgBtn = document.getElementById('upgrade-dmg-btn');
+        const upgradeRadBtn = document.getElementById('upgrade-rad-btn');
+
+        const uiTitle = document.getElementById('ui-title');
+        const uiDesc = document.getElementById('ui-desc');
+        const uiEmoji = document.getElementById('ui-emoji');
+        const progressBar = document.getElementById('progress-bar');
+        const teeth = document.querySelectorAll('.tooth');
+        const coinDisplay = document.getElementById('coin-display');
+        const shopCoinDisplay = document.getElementById('shop-coin-display');
+        const decayDisplay = document.getElementById('decay-display');
+        const comboHud = document.getElementById('combo-hud');
+        const levelDisplay = document.getElementById('level-display');
+        
+        // 오디오 컨텍스트 (간단한 효과음 생성용)
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type, pitch = 1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            if(type === 'pop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600 * pitch, now);
+                osc.frequency.exponentialRampToValueAtTime(1200 * pitch, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'scrub') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200 + Math.random()*100, now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'fever') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'bad') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.5);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        // --- 글로벌 상태 및 데이터 ---
+        let isPlaying = false;
+        let isBrushing = false;
+        let germs = [];
+        let totalGerms = 0;
+        let animationFrameId = null;
+        
+        let gameState = {
+            combo: 0,
+            feverMode: false,
+            decayedTeeth: 0,
+            comboTimer: null
+        };
+
+        // 로컬 스토리지 데이터 로드
+        let savedData = JSON.parse(localStorage.getItem('chikaData')) || {
+            coins: 0,
+            dmgLvl: 1,
+            radLvl: 1,
+            currentLevel: 1,
+            persistedDecay: 0, // 이전 단계에서 상한 채로 넘어온 이빨 개수
+            decayedIndices: [] // 상한 이빨의 고정 위치(인덱스) 기억
+        };
+        // 이전 버전 데이터 호환성 보장
+        if (!savedData.currentLevel) savedData.currentLevel = 1;
+        if (typeof savedData.persistedDecay === 'undefined') savedData.persistedDecay = 0;
+        if (!savedData.decayedIndices) savedData.decayedIndices = [];
+
+        // 레벨별 난이도 파라미터 계산
+        let currentLevelParams = {};
+        function getLevelParams() {
+            const lvl = savedData.currentLevel || 1;
+            return {
+                germCount: Math.floor(Math.random() * 4) + 10 + (lvl * 2), // 1단계: 12마리 -> 10단계: 30마리
+                attachDelay: Math.max(1000, 4500 - (lvl * 300)), // 1단계: 4.2초 대기 -> 10단계: 1.5초만에 달라붙음
+                rotSpeed: 0.2 + (lvl * 0.05), // 부패 속도 점진적 증가
+                speedMult: 0.8 + (lvl * 0.15), // 세균 이동 속도 증가
+                bossChance: Math.min(0.3, 0.05 + (lvl * 0.02)) // 보스 등장 확률 증가
+            };
+        }
+
+        // 플레이어 능력치
+        let playerStats = {
+            baseRadius: 55,
+            baseDamage: 8
+        };
+
+        function updateUI() {
+            coinDisplay.innerText = savedData.coins;
+            shopCoinDisplay.innerText = savedData.coins;
+            document.getElementById('lvl-dmg').innerText = savedData.dmgLvl;
+            document.getElementById('lvl-rad').innerText = savedData.radLvl;
+            decayDisplay.innerText = `${gameState.decayedTeeth} / 3`;
+            levelDisplay.innerText = savedData.currentLevel;
+            
+            // 업그레이드 비용 계산
+            const dmgCost = savedData.dmgLvl * 50;
+            const radCost = savedData.radLvl * 50;
+            upgradeDmgBtn.innerText = `${dmgCost} 🪙`;
+            upgradeRadBtn.innerText = `${radCost} 🪙`;
+            
+            // 버튼 활성화/비활성화
+            upgradeDmgBtn.disabled = savedData.coins < dmgCost;
+            upgradeRadBtn.disabled = savedData.coins < radCost;
+            upgradeDmgBtn.className = savedData.coins < dmgCost ? "bg-gray-300 font-bold px-3 py-1 rounded text-gray-500" : "bg-yellow-400 hover:bg-yellow-500 font-bold px-3 py-1 rounded shadow active:scale-95";
+            upgradeRadBtn.className = savedData.coins < radCost ? "bg-gray-300 font-bold px-3 py-1 rounded text-gray-500" : "bg-yellow-400 hover:bg-yellow-500 font-bold px-3 py-1 rounded shadow active:scale-95";
+
+            // 실제 스탯 적용
+            playerStats.baseDamage = 8 + (savedData.dmgLvl - 1) * 3;
+            playerStats.baseRadius = 55 + (savedData.radLvl - 1) * 8;
+
+            // 칫솔의 시각적 크기 및 파워 이펙트 반영
+            if (toothbrush && brushInner) {
+                // 왕 칫솔(범위) 업그레이드 시 중심 기준 크기 즉시 증가
+                const newSize = 50 + (savedData.radLvl * 10);
+                toothbrush.style.fontSize = `${newSize}px`;
+
+                // 파워 칫솔(데미지) 업그레이드 시 칫솔 색상(Hue) 및 오라 변경 (이모지 모양 고정)
+                let glowFilter = 'drop-shadow(2px 4px 6px rgba(0,0,0,0.3))'; // 기본 그림자
+
+                if (savedData.dmgLvl >= 5) {
+                    glowFilter = 'hue-rotate(150deg) saturate(2) drop-shadow(0 0 15px rgba(239, 68, 68, 0.9))'; // 빨간색 오라
+                } else if (savedData.dmgLvl >= 3) {
+                    glowFilter = 'hue-rotate(250deg) saturate(2) drop-shadow(0 0 12px rgba(168, 85, 247, 0.9))'; // 보라색 오라
+                } else if (savedData.dmgLvl >= 2) {
+                    glowFilter = 'hue-rotate(80deg) saturate(2) drop-shadow(0 0 10px rgba(59, 130, 246, 0.9))'; // 파란색 오라
+                }
+
+                brushInner.style.filter = glowFilter;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('chikaData', JSON.stringify(savedData));
+            updateUI();
+        }
+        
+        // 이빨 색상 관리를 위한 유틸리티 함수
+        function updateToothColor(t, newColorClass) {
+            t.classList.remove('bg-white', 'bg-yellow-100', 'bg-yellow-200', 'bg-yellow-400', 'bg-yellow-600', 'bg-amber-800', 'bg-gray-800');
+            t.classList.add(newColorClass);
+        }
+
+        // 세균 타입 정의 (보스 추가)
+        const germTypes = [
+            { emoji: '🦠', hp: 100, speed: 1.5, isBoss: false },
+            { emoji: '👾', hp: 120, speed: 2.0, isBoss: false },
+            { emoji: '🍫', hp: 200, speed: 0.5, isBoss: false },
+            { emoji: '🍬', hp: 180, speed: 0.8, isBoss: false },
+            { emoji: '🍩', hp: 150, speed: 1.0, isBoss: false },
+            { emoji: '🍮', hp: 600, speed: 0.3, isBoss: true } // 보스 젤리
+        ];
+
+        // --- 기능 함수들 ---
+
+        function createGerm() {
+            const germEl = document.createElement('div');
+            // 보스는 레벨에 따른 확률로 등장
+            const isBossSpawn = Math.random() < currentLevelParams.bossChance;
+            let typeData;
+            
+            if (isBossSpawn) {
+                typeData = germTypes.find(t => t.isBoss);
+                // 보스 등장 시 화면 흔들림
+                gameContainer.classList.remove('shake-anim');
+                void gameContainer.offsetWidth; // 리플로우 강제 (애니메이션 재시작)
+                gameContainer.classList.add('shake-anim');
+            } else {
+                const normals = germTypes.filter(t => !t.isBoss);
+                typeData = normals[Math.floor(Math.random() * normals.length)];
+            }
+            
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+
+            const isTopTooth = Math.random() > 0.5;
+            let yPos = isTopTooth ? Math.random() * (containerHeight * 0.3) + 20 : containerHeight - (Math.random() * (containerHeight * 0.3) + 20);
+            const xPos = Math.random() * (containerWidth - 60) + 30; 
+
+            germEl.className = 'absolute transition-opacity duration-100 z-10';
+            germEl.style.left = `${xPos}px`;
+            germEl.style.top = `${yPos}px`;
+            germEl.style.transform = 'translate(-50%, -50%)';
+
+            const innerEl = document.createElement('div');
+            innerEl.className = `germ-anim ${isBossSpawn ? 'text-7xl drop-shadow-xl' : 'text-4xl sm:text-5xl'}`;
+            innerEl.innerText = typeData.emoji;
+            germEl.appendChild(innerEl);
+            
+            const germData = {
+                element: germEl,
+                x: xPos, y: yPos,
+                vx: (Math.random() > 0.5 ? 1 : -1) * typeData.speed * currentLevelParams.speedMult,
+                vy: (Math.random() > 0.5 ? 1 : -1) * typeData.speed * currentLevelParams.speedMult,
+                hp: typeData.hp,
+                maxHp: typeData.hp,
+                isBoss: typeData.isBoss,
+                spawnTime: Date.now(), // 충치 계산용
+                isAttached: false,
+                attachedTooth: null,
+                rotProgress: 0 // 이빨을 부패시키는 진행도 (0~100)
+            };
+
+            germsContainer.appendChild(germEl);
+            return germData;
+        }
+
+        // 데미지 텍스트 팝업
+        function showDamage(x, y, amount, isCrit = false) {
+            const dmgEl = document.createElement('div');
+            dmgEl.innerText = `-${amount}`;
+            dmgEl.className = `absolute font-black pointer-events-none transition-all duration-500 z-50 transform -translate-x-1/2 -translate-y-1/2 ${isCrit ? 'text-red-500 text-3xl drop-shadow-md' : 'text-orange-500 text-xl'}`;
+            dmgEl.style.left = `${x}px`;
+            dmgEl.style.top = `${y}px`;
+            
+            damageContainer.appendChild(dmgEl);
+            
+            requestAnimationFrame(() => {
+                dmgEl.style.transform = `translate(-50%, -100%) scale(${isCrit ? 1.2 : 1})`;
+                dmgEl.style.opacity = '0';
+            });
+
+            setTimeout(() => {
+                if (dmgEl.parentNode) dmgEl.parentNode.removeChild(dmgEl);
+            }, 500);
+        }
+
+        // 콤보 업데이트
+        function addCombo() {
+            gameState.combo++;
+            
+            if (gameState.combo > 3) {
+                comboHud.innerText = `${gameState.combo} COMBO!`;
+                comboHud.classList.remove('combo-pop');
+                void comboHud.offsetWidth;
+                comboHud.classList.add('combo-pop');
+                comboHud.style.opacity = '1';
+            }
+
+            // 피버 타임 발동 (10 콤보)
+            if (gameState.combo >= 10 && !gameState.feverMode) {
+                gameState.feverMode = true;
+                playSound('fever');
+                gameContainer.classList.add('shake-anim');
+                brushScale.classList.add('fever-glow');
+                setTimeout(() => gameContainer.classList.remove('shake-anim'), 500);
+            }
+
+            clearTimeout(gameState.comboTimer);
+            gameState.comboTimer = setTimeout(() => {
+                gameState.combo = 0;
+                gameState.feverMode = false;
+                comboHud.style.opacity = '0';
+                brushScale.classList.remove('fever-glow');
+            }, 1500);
+        }
+
+        // 게임 루프 (이동 및 충치 생성 로직)
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            const now = Date.now();
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+
+            // 충치를 위해 현재 공격받지 않고 있는 건강한 이빨 찾기
+            const availableTeeth = Array.from(teeth).filter(t => t.dataset.targeted !== "true" && t.dataset.decayed !== "true");
+
+            germs.forEach(g => {
+                if (g.hp <= 0) return;
+
+                // 1. 세균 안착 로직 (돌아다니다가 레벨에 따른 대기 시간 후 이빨에 달라붙음)
+                if (!g.isAttached && now - g.spawnTime > currentLevelParams.attachDelay) {
+                    if (availableTeeth.length > 0) {
+                        const targetTooth = availableTeeth[Math.floor(Math.random() * availableTeeth.length)];
+                        
+                        g.isAttached = true;
+                        g.attachedTooth = targetTooth;
+                        g.rotProgress = 0;
+                        targetTooth.dataset.targeted = "true";
+                        
+                        g.vx = 0; 
+                        g.vy = 0;
+                        
+                        const rect = targetTooth.getBoundingClientRect();
+                        const cRect = gameContainer.getBoundingClientRect();
+                        g.x = rect.left - cRect.left + rect.width / 2;
+                        g.y = rect.top - cRect.top + rect.height / 2;
+
+                        const animEl = g.element.querySelector('.germ-anim');
+                        if (animEl) animEl.style.animationDuration = '0.4s';
+                    } else {
+                        g.spawnTime = now;
+                    }
+                }
+
+                // 2. 이빨 부패 진행 로직
+                if (g.isAttached && g.attachedTooth) {
+                    g.rotProgress += currentLevelParams.rotSpeed; 
+                    const t = g.attachedTooth;
+
+                    if (g.rotProgress < 25) {
+                        updateToothColor(t, 'bg-yellow-200');
+                    } else if (g.rotProgress < 50) {
+                        updateToothColor(t, 'bg-yellow-400');
+                    } else if (g.rotProgress < 75) {
+                        updateToothColor(t, 'bg-yellow-600');
+                    } else if (g.rotProgress < 100) {
+                        updateToothColor(t, 'bg-amber-800'); 
+                        t.style.boxShadow = "inset 0 0 10px rgba(0,0,0,0.3)";
+                    } else if (g.rotProgress >= 100 && t.dataset.decayed !== "true") {
+                        // 100 도달 시 완전 썩음 처리
+                        updateToothColor(t, 'bg-gray-800'); 
+                        t.style.boxShadow = "inset 0 0 15px rgba(0,0,0,0.8)";
+                        t.dataset.decayed = "true";
+                        
+                        // 충치 개수 증가
+                        gameState.decayedTeeth++;
+                        decayDisplay.innerText = `${gameState.decayedTeeth} / 3`;
+                        playSound('bad');
+                        gameContainer.classList.add('shake-anim');
+                        setTimeout(() => gameContainer.classList.remove('shake-anim'), 500);
+
+                        if (gameState.decayedTeeth >= 3) {
+                            gameOver();
+                            return; 
+                        }
+                    }
+                }
+
+                // 3. 이동 로직
+                if (!g.isAttached) {
+                    g.x += g.vx;
+                    g.y += g.vy;
+
+                    if (g.x < 30 || g.x > containerWidth - 30) g.vx *= -1;
+                    if (g.y < 20 || g.y > containerHeight - 20) g.vy *= -1;
+                }
+
+                g.element.style.left = `${g.x}px`;
+                g.element.style.top = `${g.y}px`;
+            });
+
+            if(isPlaying) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // 게임 시작
+        function startGame() {
+            initAudio();
+            isPlaying = true;
+            isBrushing = false;
+            
+            currentLevelParams = getLevelParams(); 
+            
+            // 이전 스테이지에서 상한 개수를 기반으로 충치 시작
+            gameState.decayedTeeth = savedData.persistedDecay || 0;
+            gameState.combo = 0;
+            gameState.feverMode = false;
+            decayDisplay.innerText = `${gameState.decayedTeeth} / 3`;
+            comboHud.style.opacity = '0';
+            brushScale.classList.remove('fever-glow');
+            
+            // 시작 시 칫솔 UI 업데이트 강제 적용 (크기 및 효과 반영)
+            updateUI();
+            
+            germsContainer.innerHTML = '';
+            uiOverlay.classList.add('hidden');
+            mainPanel.classList.remove('hidden');
+            shopPanel.classList.add('hidden');
+            toothbrush.classList.remove('hidden');
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            clearTimeout(gameState.comboTimer);
+            
+            // 이빨 1차 초기화 (모두 건강한 상태로 세팅)
+            teeth.forEach(t => {
+                t.dataset.targeted = "false";
+                t.dataset.decayed = "false";
+                updateToothColor(t, 'bg-yellow-100');
+                t.style.boxShadow = ""; 
+            });
+
+            // 영구 썩은 이빨이 있다면, 저장된 위치(인덱스)를 그대로 까맣게 만들기
+            if (savedData.decayedIndices && savedData.decayedIndices.length > 0) {
+                savedData.decayedIndices.forEach(idx => {
+                    const t = teeth[idx];
+                    if (t) {
+                        t.dataset.decayed = "true";
+                        updateToothColor(t, 'bg-gray-800');
+                        t.style.boxShadow = "inset 0 0 15px rgba(0,0,0,0.8)";
+                    }
+                });
+                // 확실한 동기화를 위해 개수 갱신
+                gameState.decayedTeeth = savedData.decayedIndices.length;
+                decayDisplay.innerText = `${gameState.decayedTeeth} / 3`;
+            }
+
+            // 세균 생성
+            const germCount = currentLevelParams.germCount;
+            germs = [];
+            for(let i=0; i<germCount; i++) {
+                germs.push(createGerm());
+            }
+            totalGerms = germs.length;
+            updateProgress();
+
+            gameLoop();
+        }
+
+        // 거품 효과
+        function createBubble(x, y) {
+            const bubble = document.createElement('div');
+            bubble.className = 'absolute bg-white rounded-full opacity-80 bubble';
+            const size = Math.random() * 15 + 10;
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.left = `${x + (Math.random() * 30 - 15) - size/2}px`;
+            bubble.style.top = `${y + (Math.random() * 30 - 15) - size/2}px`;
+            bubblesContainer.appendChild(bubble);
+            setTimeout(() => {
+                if(bubble.parentNode) bubble.parentNode.removeChild(bubble);
+            }, 600);
+        }
+
+        function updateProgress() {
+            const remaining = germs.filter(g => g.hp > 0).length;
+            const percent = ((totalGerms - remaining) / totalGerms) * 100;
+            progressBar.style.width = `${percent}%`;
+
+            if (remaining === 0 && isPlaying) {
+                winGame();
+            }
+        }
+
+        // 게임 오버 (충치 3개) - 레벨 강등 및 이빨 초기화 처리
+        function gameOver() {
+            isPlaying = false;
+            isBrushing = false;
+            brushInner.classList.remove('scrubbing');
+            toothbrush.classList.add('hidden');
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            clearTimeout(gameState.comboTimer);
+
+            // 게임 오버 시 전 단계로 강등 (최소 1레벨)
+            const oldLevel = savedData.currentLevel;
+            savedData.currentLevel = Math.max(1, savedData.currentLevel - 1);
+            // 아이에게 다시 깨끗하게 도전할 수 있도록 썩은 이빨 상태 및 위치 리셋
+            savedData.persistedDecay = 0; 
+            savedData.decayedIndices = [];
+            saveData();
+
+            let descText = "이빨이 완전히 썩어버렸어요.<br>";
+            if(oldLevel > 1) {
+                descText += `<b class="text-red-500">레벨이 한 단계 내려갔어요.</b> 다시 깨끗하게 해볼까요?`;
+            } else {
+                descText += "다시 깨끗하게 양치해볼까요?";
+            }
+
+            uiTitle.innerText = "충치균이 이겼어요 ㅠㅠ";
+            uiTitle.classList.replace('text-gray-800', 'text-red-600');
+            uiTitle.classList.replace('text-blue-600', 'text-red-600');
+            uiDesc.innerHTML = descText;
+            uiEmoji.innerText = "😭";
+            startBtn.innerText = "이전 레벨부터 재도전!";
+            uiOverlay.classList.remove('hidden');
+            mainPanel.classList.remove('hidden');
+        }
+
+        // 승리
+        function winGame() {
+            isPlaying = false;
+            isBrushing = false;
+            brushInner.classList.remove('scrubbing');
+            toothbrush.classList.add('hidden');
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            clearTimeout(gameState.comboTimer);
+
+            // 건강한 이빨 하얗게 빛나게 변경 및 썩은 이빨 위치 기억
+            let remainingHealthy = 0;
+            savedData.decayedIndices = []; // 새로운 위치 배열 준비
+            
+            teeth.forEach((t, idx) => {
+                if (t.dataset.decayed !== "true") {
+                    updateToothColor(t, 'bg-white');
+                    t.style.boxShadow = "0 0 20px rgba(255,255,255,0.8)";
+                    remainingHealthy++;
+                } else {
+                    // 완전히 썩은 이빨의 인덱스를 저장
+                    savedData.decayedIndices.push(idx);
+                }
+            });
+
+            // 현재 남은 썩은 이빨 개수를 다음 레벨로 인계
+            savedData.persistedDecay = savedData.decayedIndices.length;
+
+            // 보상 계산
+            const earnedCoins = remainingHealthy * 2 + totalGerms * 1;
+            
+            // 레벨 상승 처리
+            let nextLvlText = "다음 단계로!";
+            if (savedData.currentLevel < 10) {
+                uiTitle.innerText = `스테이지 ${savedData.currentLevel} 클리어!`;
+                savedData.currentLevel++;
+            } else {
+                uiTitle.innerText = "마스터 양치왕!";
+                nextLvlText = "최고 난이도 계속하기";
+            }
+            
+            savedData.coins += earnedCoins;
+            saveData();
+
+            setTimeout(() => {
+                uiTitle.classList.replace('text-gray-800', 'text-blue-600');
+                uiTitle.classList.replace('text-red-600', 'text-blue-600');
+                
+                // 클리어 메시지 (썩은 이빨이 남아있는지 여부에 따라 다르게)
+                if (savedData.persistedDecay > 0) {
+                    uiDesc.innerHTML = `휴~ 까맣게 상한 이빨이 있지만<br>나머지는 안전하게 지켜냈어요! 😅<br><b class="text-yellow-600">+${earnedCoins} 코인 획득!</b>`;
+                } else {
+                    uiDesc.innerHTML = `우와! 이빨이 반짝반짝해졌어요! ✨<br><b class="text-yellow-600">+${earnedCoins} 코인 획득!</b>`;
+                }
+                
+                uiEmoji.innerText = "😁";
+                startBtn.innerText = nextLvlText;
+                uiOverlay.classList.remove('hidden');
+                mainPanel.classList.remove('hidden');
+                
+                for(let i=0; i<30; i++) {
+                    setTimeout(() => {
+                        createBubble(Math.random() * gameContainer.clientWidth, Math.random() * gameContainer.clientHeight);
+                    }, i * 50);
+                }
+            }, 1000);
+        }
+
+        // 브러싱 로직
+        function handleBrush(e) {
+            if (!isPlaying) return;
+            
+            const containerRect = gameContainer.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - containerRect.left;
+            const y = clientY - containerRect.top;
+
+            toothbrush.style.left = `${x}px`;
+            toothbrush.style.top = `${y}px`;
+
+            if (!isBrushing) return;
+
+            if(Math.random() < 0.3) createBubble(x, y);
+            if(Math.random() < 0.2) playSound('scrub');
+
+            const currentRadius = gameState.feverMode ? playerStats.baseRadius * 1.5 : playerStats.baseRadius;
+            const currentDamage = gameState.feverMode ? playerStats.baseDamage * 2 : playerStats.baseDamage;
+            let germDamaged = false;
+
+            germs.forEach(g => {
+                if (g.hp <= 0) return;
+
+                const dx = g.x - x;
+                const dy = g.y - y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+
+                if (distance < currentRadius) {
+                    g.hp -= currentDamage;
+                    germDamaged = true;
+                    
+                    if(Math.random() < 0.5) showDamage(g.x, g.y, currentDamage, gameState.feverMode);
+
+                    g.element.style.opacity = Math.max(0.3, g.hp / g.maxHp);
+                    
+                    if (!g.isAttached && !g.isBoss) {
+                        g.x += (dx / distance) * -15; 
+                        g.y += (dy / distance) * -15;
+                    }
+
+                    if (g.hp <= 0) {
+                        playSound('pop', 1 + (gameState.combo * 0.05));
+                        g.element.style.transform = 'translate(-50%, -50%) scale(0)';
+                        
+                        if (g.isAttached && g.attachedTooth) {
+                            const t = g.attachedTooth;
+                            t.dataset.targeted = "false"; 
+                            
+                            // 썩지 않았다면 이빨 원래 색상으로 회복 (썩은 이빨은 회복 불가)
+                            if (t.dataset.decayed !== "true") {
+                                updateToothColor(t, 'bg-yellow-100');
+                                t.style.boxShadow = "";
+                            }
+                        }
+
+                        setTimeout(() => {
+                            if(g.element.parentNode) g.element.parentNode.removeChild(g.element);
+                        }, 200);
+                    }
+                }
+            });
+
+            if (germDamaged) {
+                addCombo();
+                updateProgress();
+            }
+        }
+
+        // --- 이벤트 리스너 ---
+
+        gameContainer.addEventListener('pointerdown', (e) => {
+            if(!isPlaying) return;
+            isBrushing = true;
+            initAudio(); 
+            brushInner.classList.add('scrubbing');
+            handleBrush(e);
+        });
+
+        gameContainer.addEventListener('pointermove', (e) => {
+            toothbrush.style.display = 'block';
+            handleBrush(e);
+        });
+
+        const stopBrushing = () => {
+            isBrushing = false;
+            brushInner.classList.remove('scrubbing');
+        };
+        
+        window.addEventListener('pointerup', stopBrushing);
+        gameContainer.addEventListener('pointerleave', () => {
+            stopBrushing();
+            if(isPlaying) toothbrush.style.display = 'none';
+        });
+
+        startBtn.addEventListener('click', startGame);
+
+        shopBtn.addEventListener('click', () => {
+            mainPanel.classList.add('hidden');
+            shopPanel.classList.remove('hidden');
+            updateUI();
+        });
+
+        closeShopBtn.addEventListener('click', () => {
+            shopPanel.classList.add('hidden');
+            mainPanel.classList.remove('hidden');
+        });
+
+        upgradeDmgBtn.addEventListener('click', () => {
+            const cost = savedData.dmgLvl * 50;
+            if (savedData.coins >= cost) {
+                savedData.coins -= cost;
+                savedData.dmgLvl++;
+                saveData();
+            }
+        });
+
+        upgradeRadBtn.addEventListener('click', () => {
+            const cost = savedData.radLvl * 50;
+            if (savedData.coins >= cost) {
+                savedData.coins -= cost;
+                savedData.radLvl++;
+                saveData();
+            }
+        });
+
+        updateUI();
+
+    </script>
+</body>
+</html>

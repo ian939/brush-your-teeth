@@ -66,7 +66,7 @@
     <h1 class="text-3xl font-black text-blue-600 mb-2 drop-shadow-md">✨ 치카치카 대작전 ✨</h1>
     
     <!-- HUD (재화 및 상태창) -->
-    <div class="flex justify-between w-full max-w-md px-4 mb-2 font-bold text-sm sm:text-lg">
+    <div class="flex justify-between w-full max-w-4xl px-4 mb-2 font-bold text-sm sm:text-lg">
         <div class="bg-blue-500 px-3 py-1 rounded-full shadow border-2 border-blue-700 text-white flex items-center gap-1">
             ⭐ Lv.<span id="level-display">1</span>
         </div>
@@ -78,8 +78,8 @@
         </div>
     </div>
 
-    <!-- 게임 화면 컨테이너 -->
-    <div id="game-container" class="relative w-full max-w-md h-[65vh] bg-red-400 rounded-3xl shadow-2xl overflow-hidden border-8 border-pink-300 cursor-none transition-transform">
+    <!-- 게임 화면 컨테이너 (너비를 2배인 max-w-4xl로 확장) -->
+    <div id="game-container" class="relative w-full max-w-4xl h-[65vh] bg-red-400 rounded-3xl shadow-2xl overflow-hidden border-8 border-pink-300 cursor-none transition-transform">
         
         <!-- 콤보 표시기 -->
         <div id="combo-hud" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-40 opacity-0 pointer-events-none italic">
@@ -147,37 +147,36 @@
             </div>
 
             <!-- 상점 패널 (기본 숨김) -->
-            <div id="shop-panel" class="hidden bg-white p-6 rounded-3xl text-center shadow-2xl border-4 border-purple-300 w-10/12 max-w-sm absolute">
-                <h2 class="text-2xl font-bold text-purple-700 mb-4">🛒 치과 상점</h2>
-                <div class="bg-yellow-100 rounded-lg p-2 mb-4 text-yellow-800 font-bold border-2 border-yellow-300">
-                    보유 코인: <span id="shop-coin-display">0</span>
-                </div>
-                
-                <div class="space-y-3 mb-4 text-left">
-                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                        <div>
-                            <div class="font-bold text-gray-800">💪 파워 칫솔</div>
-                            <div class="text-xs text-gray-500">세균을 더 빨리 없앱니다 (Lv.<span id="lvl-dmg">1</span>)</div>
-                        </div>
-                        <button id="upgrade-dmg-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
-                    </div>
-                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                        <div>
-                            <div class="font-bold text-gray-800">✨ 왕 칫솔</div>
-                            <div class="text-xs text-gray-500">닦는 범위가 넓어집니다 (Lv.<span id="lvl-rad">1</span>)</div>
-                        </div>
-                        <button id="upgrade-rad-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
-                    </div>
-                </div>
-                
-                <button id="close-shop-btn" class="bg-gray-400 text-white font-bold py-2 px-6 rounded-full w-full">닫기</button>
+        <div id="shop-panel" class="hidden bg-white p-6 rounded-3xl text-center shadow-2xl border-4 border-purple-300 w-10/12 max-w-sm absolute">
+            <h2 class="text-2xl font-bold text-purple-700 mb-4">🛒 치과 상점</h2>
+            <div class="bg-yellow-100 rounded-lg p-2 mb-4 text-yellow-800 font-bold border-2 border-yellow-300">
+                보유 코인: <span id="shop-coin-display">0</span>
             </div>
             
+            <div class="space-y-3 mb-4 text-left">
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div>
+                        <div class="font-bold text-gray-800">💪 파워 칫솔</div>
+                        <div class="text-xs text-gray-500">세균을 더 빨리 없앱니다 (Lv.<span id="lvl-dmg">1</span>)</div>
+                    </div>
+                    <button id="upgrade-dmg-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
+                </div>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div>
+                        <div class="font-bold text-gray-800">✨ 왕 칫솔</div>
+                        <div class="text-xs text-gray-500">닦는 범위가 넓어집니다 (Lv.<span id="lvl-rad">1</span>)</div>
+                    </div>
+                    <button id="upgrade-rad-btn" class="bg-yellow-400 font-bold px-3 py-1 rounded shadow active:scale-95">50 🪙</button>
+                </div>
+            </div>
+            
+            <button id="close-shop-btn" class="bg-gray-400 text-white font-bold py-2 px-6 rounded-full w-full">닫기</button>
         </div>
+        
     </div>
 
-    <!-- 진행도 바 -->
-    <div class="w-full max-w-md mt-4 px-4 flex gap-2 items-center">
+    <!-- 진행도 바 (너비를 동일하게 max-w-4xl로 확장) -->
+    <div class="w-full max-w-4xl mt-4 px-4 flex gap-2 items-center">
         <span class="text-2xl" id="progress-emoji">🦠</span>
         <div class="bg-white rounded-full h-4 w-full shadow-inner overflow-hidden border-2 border-blue-200">
             <div id="progress-bar" class="bg-blue-400 h-full w-0 transition-all duration-300 rounded-full"></div>

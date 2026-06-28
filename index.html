@@ -133,6 +133,21 @@
     font-size:clamp(17px,4.6vw,21px);color:var(--ink-soft);margin:8px 0 2px;min-height:1.4em
   }
   .hint b{color:var(--lotus-deep)}
+  /* recap popup (modal) shown after solving stages 3 & 4 */
+  .modal-overlay{
+    position:fixed;inset:0;z-index:80;background:rgba(36,66,53,.45);
+    display:flex;align-items:center;justify-content:center;padding:20px;animation:fadein .2s ease;
+  }
+  .modal{
+    background:linear-gradient(180deg,#EAF8EC,#ffffff);
+    border:2px solid var(--lily);border-radius:26px;
+    padding:22px 22px 24px;max-width:420px;width:100%;text-align:center;
+    box-shadow:0 18px 50px rgba(36,66,53,.35);
+    animation:modalpop .32s cubic-bezier(.3,1.3,.5,1);
+  }
+  @keyframes modalpop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+  .recap-msg{font-family:'Jua',sans-serif;font-size:23px;color:var(--leaf-dark)}
+  .modal .vequation{margin:12px 0 18px}
 
   /* ===== Number line ===== */
   .nl-wrap{margin-top:8px;overflow-x:auto;overflow-y:hidden;padding:64px 8px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
@@ -268,6 +283,7 @@
     .froghero{animation:none}
     .startflag{animation:none}
     .step.active .eqline .block{animation:none}
+    .modal{animation:none}
     .conf{display:none}
   }
 </style>
@@ -449,13 +465,17 @@ function buildProblems(stage){
   }
   return arr;
 }
-// vertical column form (세로셈): top number, minus + bottom number, bar, answer
-function vColumnHTML(a, b){
+// vertical column form (세로셈): top number, minus + bottom number, bar, answer.
+// pass `ans` to fill the answer (otherwise shows "?")
+function vColumnHTML(a, b, ans){
+  const ansCell = (ans===undefined)
+    ? '<span class="vnum ans blank">?</span>'
+    : '<span class="vnum ans">'+ans+'</span>';
   return '<div class="vequation">'+
     '<div class="vrow"><span class="vop"></span><span class="vnum">'+a+'</span></div>'+
     '<div class="vrow"><span class="vop">−</span><span class="vnum sub">'+b+'</span></div>'+
     '<div class="vbar"></div>'+
-    '<div class="vrow"><span class="vop"></span><span class="vnum ans blank">?</span></div>'+
+    '<div class="vrow"><span class="vop"></span>'+ansCell+'</div>'+
   '</div>';
 }
 
@@ -485,6 +505,8 @@ function renderProblem(){
   if(p.type==='line') renderLine(p, area);
   else if(p.type==='borrow') renderBorrow(p, area);
   else renderPlace(p, area);
+  // bring the fresh problem into view from the top (steps may have scrolled the page down)
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 /* ===== NUMBER LINE (stage 1 & 2) ===== */
@@ -672,6 +694,14 @@ function renderBorrow(p, area){
 
   saying(area,'10을 빌려서 빼면 쉬워요!');
 
+  let solved=false;
+  function complete(){
+    if(solved) return; solved=true;
+    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
+    area.querySelectorAll('button').forEach(b=>b.disabled=true);
+    showRecap(area, p);
+  }
+
   document.getElementById('s1next').onclick = ()=>{
     s1.classList.add('solved'); s1.classList.remove('active');
     s2.classList.add('active'); sCorrect();
@@ -689,9 +719,10 @@ function renderBorrow(p, area){
     document.getElementById('slot2').textContent=p.ans;
     document.getElementById('slot2').classList.remove('empty');
     s3.classList.add('solved'); s3.classList.remove('active');
-    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
-    finishProblem();
+    complete();
   });
+
+  addFinalPicker(area, p.ans, complete);
 }
 
 /* ===== PLACE VALUE (stage 4): 35 - 12 ===== */
@@ -702,21 +733,21 @@ function renderPlace(p, area){
 
   const steps=document.createElement('div'); steps.className='steps';
 
-  // step1 tens
+  // step1 ones (can be negative)
   const s1=document.createElement('div'); s1.className='step active';
   s1.innerHTML=
-    '<div class="label"><span class="no">1</span> 십의 자리부터 빼기</div>'+
-    '<div class="talk">앞의 큰 자리(십)를 먼저 빼요.</div>'+
-    '<div class="eqline"><span class="num">'+(p.t1*10)+'</span> <span class="op">−</span> <span class="num">'+(p.t2*10)+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot1">?</span></div>'+
+    '<div class="label"><span class="no">1</span> 일의 자리부터 빼기</div>'+
+    '<div class="talk">뒤의 일의 자리를 먼저 빼요.'+(p.onesRes<0?' <b>모자라면 음수</b>가 돼요!':'')+'</div>'+
+    '<div class="eqline"><span class="num">'+p.o1+'</span> <span class="op">−</span> <span class="num">'+p.o2+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot1">?</span></div>'+
     '<div class="choices" id="pc1"></div>';
   steps.appendChild(s1);
 
-  // step2 ones (can be negative)
+  // step2 tens
   const s2=document.createElement('div'); s2.className='step';
   s2.innerHTML=
-    '<div class="label"><span class="no">2</span> 일의 자리 빼기</div>'+
-    '<div class="talk">이제 일의 자리를 빼요.'+(p.onesRes<0?' <b>모자라면 음수</b>가 돼요!':'')+'</div>'+
-    '<div class="eqline"><span class="num">'+p.o1+'</span> <span class="op">−</span> <span class="num">'+p.o2+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot2">?</span></div>'+
+    '<div class="label"><span class="no">2</span> 십의 자리 빼기</div>'+
+    '<div class="talk">이제 앞의 십의 자리를 빼요.</div>'+
+    '<div class="eqline"><span class="num">'+(p.t1*10)+'</span> <span class="op">−</span> <span class="num">'+(p.t2*10)+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot2">?</span></div>'+
     '<div class="choices" id="pc2"></div>';
   steps.appendChild(s2);
 
@@ -730,20 +761,29 @@ function renderPlace(p, area){
   steps.appendChild(s3);
   area.appendChild(steps);
 
-  saying(area,'큰 자리부터 빼면 머릿속으로도 쉬워요!');
+  saying(area,'자리별로 하나씩 빼면 쉬워요!');
 
-  buildChoices('pc1', p.tensRes, false, ()=>{
-    setSlot('pslot1', p.tensRes); next(s1,s2);
+  let solved=false;
+  function complete(){
+    if(solved) return; solved=true;
+    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
+    area.querySelectorAll('button').forEach(b=>b.disabled=true);
+    showRecap(area, p);
+  }
+
+  buildChoices('pc1', p.onesRes, true, ()=>{
+    setSlot('pslot1', p.onesRes); next(s1,s2);
   });
-  buildChoices('pc2', p.onesRes, true, ()=>{
-    setSlot('pslot2', p.onesRes); next(s2,s3);
+  buildChoices('pc2', p.tensRes, false, ()=>{
+    setSlot('pslot2', p.tensRes); next(s2,s3);
   });
   buildChoices('pc3', p.ans, false, ()=>{
     setSlot('pslot3', p.ans);
     s3.classList.add('solved'); s3.classList.remove('active');
-    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
-    finishProblem();
+    complete();
   });
+
+  addFinalPicker(area, p.ans, complete);
 
   function setSlot(id,val){ const el=document.getElementById(id); el.textContent=val; el.classList.remove('empty'); }
   function next(a,b){ a.classList.add('solved'); a.classList.remove('active'); b.classList.add('active'); b.scrollIntoView({block:'center',behavior:'smooth'}); }
@@ -787,20 +827,72 @@ function saying(area, text){
   d.querySelector('.frog-mini').style.width='60px';
 }
 
+/* ---------- 6-choice generator for the final answer ---------- */
+function sixChoices(correct, allowNeg){
+  const set=new Set([correct]);
+  const pool=[-10,-5,-3,-2,-1,1,2,3,5,10];
+  let guard=0;
+  while(set.size<6 && guard++<400){
+    const cand = correct + pool[ri(0,pool.length-1)];
+    if(cand===correct) continue;
+    if(!allowNeg && cand<0) continue;
+    set.add(cand);
+  }
+  let d=1;
+  while(set.size<6 && d<40){ const c=correct+d; if(allowNeg||c>=0) set.add(c); d++; }
+  return [...set].sort(()=>Math.random()-.5);
+}
+
+/* ---------- bottom "solve it directly" picker for stages 3 & 4 ---------- */
+function addFinalPicker(area, ans, onSolve){
+  const tip=document.createElement('div'); tip.className='hint'; tip.style.marginTop='22px';
+  tip.innerHTML='바로 정답을 알겠다면? 맨 아래에서 골라요 👇';
+  area.appendChild(tip);
+  const wrap=document.createElement('div'); wrap.className='choices line-choices';
+  area.appendChild(wrap);
+  sixChoices(ans, false).forEach(v=>{
+    const b=document.createElement('button'); b.className='choice num'; b.textContent=v;
+    b.onclick=()=>{
+      if(b.disabled) return;
+      if(v===ans){ b.classList.add('right'); sCorrect(); onSolve(); }
+      else { sWrong(); b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); }
+    };
+    wrap.appendChild(b);
+  });
+}
+
 /* ---------- finish a problem ---------- */
-function finishProblem(){
+function markSolved(){
   state.solvedThisRound++;
-  // light up progress dot
   const dots=document.querySelectorAll('#progress .dot');
   if(dots[state.idx]){ dots[state.idx].classList.add('done'); dots[state.idx].classList.remove('cur'); }
   sStar();
   burst(14);
-  // advance
-  setTimeout(()=>{
-    state.idx++;
-    if(state.idx>=PROBLEMS_PER_STAGE){ finishStage(); }
-    else { renderProgress(); renderProblem(); }
-  }, 1100);
+}
+function advanceProblem(){
+  state.idx++;
+  if(state.idx>=PROBLEMS_PER_STAGE){ finishStage(); }
+  else { renderProgress(); renderProblem(); }
+}
+// stages 1-2: solve then auto-advance after a short celebration
+function finishProblem(){
+  markSolved();
+  setTimeout(advanceProblem, 1100);
+}
+// stages 3-4: solve, then pop up a recap (vertical form + answer); advance on "다음으로"
+function showRecap(area, p){
+  markSolved();
+  const ov=document.createElement('div'); ov.className='modal-overlay';
+  ov.innerHTML=
+    '<div class="modal">'+
+      '<div class="recap-msg">🎉 정답이에요!</div>'+
+      vColumnHTML(p.a, p.b, p.ans)+
+      '<div class="controls"><button class="btn go recap-next">다음으로 →</button></div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  const nextBtn=ov.querySelector('.recap-next');
+  nextBtn.onclick=()=>{ nextBtn.disabled=true; ov.remove(); advanceProblem(); };
+  nextBtn.focus();
 }
 
 /* ---------- finish stage ---------- */

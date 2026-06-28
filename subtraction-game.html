@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>뺄셈 점프 — 깡총이와 수직선 밟기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky:#CDEBF2;
+    --pond:#E9F7EE;
+    --leaf:#3FA34D;
+    --leaf-dark:#2E7D3A;
+    --lily:#8FD18C;
+    --lily-soft:#C6E9C0;
+    --sun:#FFCC4D;
+    --sun-deep:#F2A93B;
+    --lotus:#FF7E6B;
+    --lotus-deep:#E85C49;
+    --ink:#244235;
+    --ink-soft:#4f6b5c;
+    --paper:#FFFFFF;
+    --shadow:0 8px 0 rgba(36,66,53,.14);
+    --shadow-soft:0 10px 26px rgba(36,66,53,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:'Jua',system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, var(--sky) 0%, var(--pond) 55%, #DDF1E2 100%) fixed;
+    min-height:100dvh;
+    overflow-x:hidden;
+    -webkit-text-size-adjust:100%;
+  }
+  .num{font-family:'Fredoka',sans-serif;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* ===== App frame ===== */
+  .app{max-width:780px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:0 14px 26px}
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 4px 10px;position:sticky;top:0;z-index:30;
+    background:linear-gradient(180deg, var(--sky) 60%, rgba(205,235,242,0) 100%);
+  }
+  .brand{display:flex;align-items:center;gap:8px;font-size:22px;letter-spacing:.5px}
+  .brand .froglogo{width:34px;height:34px;flex:none}
+  .spacer{flex:1}
+  .iconbtn{
+    border:none;cursor:pointer;font-family:inherit;
+    width:46px;height:46px;border-radius:16px;font-size:20px;
+    background:var(--paper);color:var(--ink);box-shadow:var(--shadow);
+    display:grid;place-items:center;transition:transform .12s;
+  }
+  .iconbtn:active{transform:translateY(3px);box-shadow:0 4px 0 rgba(36,66,53,.14)}
+  .iconbtn:focus-visible{outline:3px solid var(--lotus);outline-offset:2px}
+  .iconbtn[hidden]{display:none}
+
+  /* ===== Screens ===== */
+  .screen{display:none;flex:1;flex-direction:column}
+  .screen.active{display:flex;animation:fadein .35s ease}
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ===== Home ===== */
+  .hero{text-align:center;padding:6px 0 4px}
+  .hero h1{font-size:clamp(34px,9vw,52px);margin:.1em 0 0;line-height:1.05;color:var(--leaf-dark);text-shadow:0 3px 0 #fff}
+  .hero p{font-size:clamp(15px,4vw,19px);color:var(--ink-soft);margin:.5em 0 0}
+  .hero .froghero{width:clamp(120px,34vw,168px);height:auto;margin:2px auto -6px;display:block}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-9px) rotate(1deg)}}
+  .froghero{animation:bob 2.6s ease-in-out infinite}
+
+  .stages{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  @media(max-width:430px){.stages{grid-template-columns:1fr}}
+  .stage-card{
+    border:none;cursor:pointer;font-family:inherit;text-align:left;
+    background:var(--paper);border-radius:24px;padding:18px 18px 16px;
+    box-shadow:var(--shadow-soft);position:relative;overflow:hidden;
+    transition:transform .14s;color:var(--ink);
+  }
+  .stage-card:active{transform:translateY(4px) scale(.99)}
+  .stage-card:focus-visible{outline:3px solid var(--lotus);outline-offset:3px}
+  .stage-card .badge{
+    width:48px;height:48px;border-radius:16px;display:grid;place-items:center;
+    font-size:24px;color:#fff;margin-bottom:10px;box-shadow:0 5px 0 rgba(0,0,0,.12)
+  }
+  .stage-card[data-stage="1"] .badge{background:var(--leaf)}
+  .stage-card[data-stage="2"] .badge{background:var(--lotus)}
+  .stage-card[data-stage="3"] .badge{background:var(--sun-deep)}
+  .stage-card[data-stage="4"] .badge{background:#6C8CD5}
+  .stage-card h3{margin:0;font-size:20px}
+  .stage-card .ex{font-size:16px;color:var(--ink-soft);margin-top:4px}
+  .stage-card .ex b{color:var(--lotus-deep)}
+  .stage-card .stars{margin-top:10px;font-size:17px;letter-spacing:2px;height:22px}
+  .stage-card .corner{position:absolute;right:-14px;bottom:-16px;font-size:74px;opacity:.10;transform:rotate(-12deg)}
+
+  .home-hint{margin:18px auto 0;text-align:center;font-family:'Gaegu',cursive;font-weight:700;font-size:17px;color:var(--ink-soft);max-width:440px;line-height:1.5}
+
+  /* ===== Play header ===== */
+  .play-head{display:flex;align-items:center;gap:10px;margin:2px 0 6px}
+  .play-title{font-size:21px;color:var(--leaf-dark)}
+  .progress{display:flex;gap:7px;margin-left:auto}
+  .dot{width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px var(--lily-soft);transition:.25s}
+  .dot.done{background:var(--sun);box-shadow:inset 0 0 0 3px var(--sun-deep);transform:scale(1.05)}
+  .dot.cur{box-shadow:inset 0 0 0 3px var(--leaf)}
+
+  /* ===== Equation ===== */
+  .equation{
+    text-align:center;margin:10px auto 4px;background:var(--paper);
+    border-radius:22px;padding:16px 14px;box-shadow:var(--shadow-soft);
+    font-size:clamp(40px,12vw,62px);line-height:1;
+  }
+  .equation .op{color:var(--lotus-deep)}
+  .equation .sub{color:var(--lotus-deep);position:relative}
+  .equation .ans{color:var(--leaf);display:inline-block;min-width:.9em}
+  .equation .blank{color:#cdd9d0}
+  /* vertical column form (세로셈) for stages 3 & 4 */
+  .vequation{
+    display:inline-flex;flex-direction:column;gap:2px;
+    font-family:'Fredoka',sans-serif;font-weight:700;font-variant-numeric:tabular-nums;
+    line-height:1.05;font-size:clamp(34px,10.5vw,52px);min-width:2.8em;
+  }
+  .vrow{display:flex;align-items:center;justify-content:space-between;gap:.45em;padding:0 .14em}
+  .vrow .vop{flex:none;color:var(--lotus-deep)}
+  .vrow .vnum{text-align:right;letter-spacing:.14em}
+  .vequation .sub{color:var(--lotus-deep)}
+  .vequation .ans{color:var(--leaf)}
+  .vequation .blank{color:#cdd9d0}
+  .vbar{height:6px;background:var(--ink);border-radius:6px;margin:7px .05em 3px}
+  .hint{
+    text-align:center;font-family:'Gaegu',cursive;font-weight:700;
+    font-size:clamp(17px,4.6vw,21px);color:var(--ink-soft);margin:8px 0 2px;min-height:1.4em
+  }
+  .hint b{color:var(--lotus-deep)}
+
+  /* ===== Number line ===== */
+  .nl-wrap{margin-top:8px;overflow-x:auto;overflow-y:hidden;padding:64px 8px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .nl-wrap::-webkit-scrollbar{height:8px}
+  .nl-wrap::-webkit-scrollbar-thumb{background:var(--lily);border-radius:8px}
+  .numberline{position:relative;display:inline-flex;align-items:flex-end;gap:0;padding:0 4px;min-width:100%}
+  .nl-track{position:absolute;left:10px;right:10px;bottom:30px;height:6px;background:var(--lily-soft);border-radius:6px;z-index:0}
+  .pad{
+    position:relative;z-index:1;flex:none;width:clamp(46px,13vw,62px);
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+  }
+  .pad .lily{
+    width:clamp(40px,11vw,54px);height:clamp(26px,7.2vw,34px);
+    background:radial-gradient(circle at 50% 35%, var(--lily) 0%, var(--leaf) 130%);
+    border-radius:50%;box-shadow:0 5px 0 rgba(46,125,58,.35);
+    position:relative;transition:transform .2s, box-shadow .2s;
+    clip-path:polygon(0 0,100% 0,100% 50%,55% 50%,50% 100%,45% 50%,0 50%);
+  }
+  .pad .val{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(17px,4.8vw,21px);color:var(--ink)}
+  .pad.zero .val{color:var(--lotus-deep)}
+  .pad.zero .lily{box-shadow:0 5px 0 var(--lotus-deep),0 0 0 3px var(--lotus) inset}
+  /* start point marker */
+  .pad.start .lily{box-shadow:0 5px 0 var(--sun-deep),0 0 0 3px var(--sun) inset}
+  .startflag{
+    position:absolute;top:-34px;left:50%;transform:translateX(-50%);
+    background:var(--sun);color:#7a4f00;font-family:'Jua',sans-serif;font-size:12px;
+    padding:3px 8px;border-radius:11px;white-space:nowrap;z-index:6;
+    box-shadow:0 3px 0 var(--sun-deep);animation:flagbob 1.8s ease-in-out infinite;
+  }
+  .startflag::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--sun)}
+  @keyframes flagbob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
+  .pad.lit .lily{transform:translateY(-3px) scale(1.07);box-shadow:0 7px 0 var(--sun-deep)}
+  .pad.lit .val{color:var(--sun-deep)}
+  /* ripple */
+  .ripple{position:absolute;bottom:0;left:50%;width:30px;height:30px;border-radius:50%;border:3px solid var(--sky);transform:translate(-50%,30%);opacity:0;pointer-events:none}
+  .ripple.go{animation:rip .6s ease-out}
+  @keyframes rip{0%{opacity:.8;transform:translate(-50%,30%) scale(.3)}100%{opacity:0;transform:translate(-50%,30%) scale(2.4)}}
+
+  /* frog on line */
+  .frog-wrap{position:absolute;bottom:34px;left:0;z-index:5;transform-origin:50% 100%;will-change:transform}
+  .frog-mini{width:clamp(48px,13vw,60px);height:auto;display:block;transform-origin:50% 100%}
+
+  /* ===== Controls ===== */
+  .controls{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  .btn{
+    border:none;cursor:pointer;font-family:'Jua',sans-serif;
+    border-radius:20px;padding:16px 22px;font-size:20px;color:#fff;
+    box-shadow:0 6px 0 rgba(0,0,0,.16);transition:transform .12s, box-shadow .12s;display:flex;align-items:center;gap:8px
+  }
+  .btn:active{transform:translateY(5px);box-shadow:0 1px 0 rgba(0,0,0,.16)}
+  .btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+  .btn.jump{background:var(--leaf)}
+  .btn.fwd{background:#6C8CD5}
+  .btn.go{background:var(--lotus)}
+  .btn.ghost{background:#fff;color:var(--ink-soft);box-shadow:0 6px 0 rgba(36,66,53,.12);padding:16px 18px;font-size:18px}
+  .btn[disabled]{opacity:.45;cursor:default;transform:none;box-shadow:0 6px 0 rgba(0,0,0,.1)}
+  .counter{text-align:center;margin-top:12px;font-size:18px;color:var(--ink-soft)}
+  .counter b{font-family:'Fredoka';font-weight:700;color:var(--leaf);font-size:24px}
+
+  /* ===== Step cards (stage 3-4) ===== */
+  .steps{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+  .step{
+    background:var(--paper);border-radius:22px;padding:16px 16px 18px;box-shadow:var(--shadow-soft);
+    opacity:.4;filter:saturate(.5);transition:opacity .3s, filter .3s, transform .3s;transform:scale(.985)
+  }
+  .step.active{opacity:1;filter:none;transform:none}
+  .step.solved{opacity:1;filter:none}
+  .step .label{font-size:16px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .step .label .no{width:26px;height:26px;border-radius:50%;background:var(--lily-soft);color:var(--leaf-dark);display:grid;place-items:center;font-family:'Fredoka';font-weight:700;font-size:15px;flex:none}
+  .step.solved .label .no{background:var(--sun);color:#fff}
+  .step .talk{font-family:'Gaegu',cursive;font-weight:700;color:var(--ink);font-size:18px;margin-bottom:6px;line-height:1.4}
+  .step .talk b{color:var(--lotus-deep)}
+  /* blocks visual */
+  .blocks{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin:6px 0 10px}
+  .chip{
+    font-family:'Fredoka';font-weight:700;font-size:26px;color:#fff;
+    min-width:64px;height:56px;border-radius:16px;display:grid;place-items:center;box-shadow:0 5px 0 rgba(0,0,0,.14);padding:0 12px
+  }
+  .chip.ten{background:var(--leaf)}
+  .chip.one{background:var(--sun-deep)}
+  .chip.plus{background:none;color:var(--ink-soft);box-shadow:none;font-size:28px;min-width:auto;height:auto}
+  .eqline{text-align:center;font-family:'Fredoka';font-weight:600;font-size:clamp(28px,8vw,40px);margin:4px 0 12px}
+  .eqline .op{color:var(--lotus-deep)}
+  .eqline .slot{display:inline-block;min-width:1.3em;color:var(--leaf);border-bottom:5px dotted var(--lily);padding:0 .12em}
+  .eqline .slot.empty{color:transparent}
+  /* result block: carries the chosen answer from a step above into the combine line */
+  .eqline .block{
+    display:inline-block;min-width:1.05em;text-align:center;
+    padding:.04em .32em;margin:0 .06em;border-radius:14px;
+    background:var(--sun);color:#fff;box-shadow:0 5px 0 var(--sun-deep);
+    vertical-align:middle;line-height:1.2;
+  }
+  .step.active .eqline .block{animation:blockpop .42s cubic-bezier(.3,.7,.4,1)}
+  @keyframes blockpop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
+  .choices{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .line-choices{max-width:294px;margin:6px auto 0}
+  .choice{
+    border:none;cursor:pointer;font-family:'Fredoka';font-weight:700;font-size:30px;color:var(--leaf-dark);
+    width:78px;height:70px;border-radius:18px;background:var(--lily-soft);box-shadow:0 6px 0 rgba(46,125,58,.28);
+    transition:transform .1s, box-shadow .1s;
+  }
+  .choice:active{transform:translateY(5px);box-shadow:0 1px 0 rgba(46,125,58,.28)}
+  .choice:focus-visible{outline:3px solid var(--lotus);outline-offset:3px}
+  .choice.right{background:var(--sun);color:#fff;box-shadow:0 6px 0 var(--sun-deep)}
+  .choice.wrong{animation:shake .4s}
+  .choice[disabled]{cursor:default}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  /* speech bubble for mascot */
+  .saying{
+    display:flex;align-items:center;gap:12px;justify-content:center;margin:14px auto 0;max-width:500px;
+  }
+  .saying .froglil{width:64px;height:auto;flex:none}
+  .saying .bubble{
+    background:#fff;border-radius:18px;padding:12px 16px;box-shadow:var(--shadow-soft);
+    font-family:'Gaegu',cursive;font-weight:700;font-size:18px;color:var(--ink);position:relative;line-height:1.4
+  }
+  .saying .bubble::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);border:8px solid transparent;border-right-color:#fff}
+
+  /* ===== Done screen ===== */
+  .done-box{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:10px}
+  .done-box .froghero{width:150px}
+  .done-box h2{font-size:clamp(28px,8vw,40px);color:var(--leaf-dark);margin:.2em 0}
+  .done-stars{font-size:40px;letter-spacing:6px;animation:pop .5s ease}
+  @keyframes pop{from{transform:scale(.4)}to{transform:scale(1)}}
+  .done-box p{font-family:'Gaegu',cursive;font-weight:700;font-size:20px;color:var(--ink-soft);margin:2px 0 12px}
+
+  /* confetti */
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+  .conf{position:absolute;top:-20px;width:12px;height:14px;border-radius:3px;will-change:transform,opacity}
+
+  @media (prefers-reduced-motion: reduce){
+    .froghero{animation:none}
+    .startflag{animation:none}
+    .step.active .eqline .block{animation:none}
+    .conf{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="confetti"></div>
+
+<!-- Reusable frog SVG (cloned by JS) -->
+<svg id="frog-template" style="display:none" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="50" cy="86" rx="30" ry="6" fill="rgba(36,66,53,.18)"/>
+  <!-- back legs -->
+  <ellipse cx="22" cy="70" rx="14" ry="10" fill="#2E7D3A"/>
+  <ellipse cx="78" cy="70" rx="14" ry="10" fill="#2E7D3A"/>
+  <!-- body -->
+  <path d="M50 30 C24 30 16 50 18 66 C20 80 36 84 50 84 C64 84 80 80 82 66 C84 50 76 30 50 30 Z" fill="#3FA34D"/>
+  <!-- belly -->
+  <ellipse cx="50" cy="68" rx="20" ry="15" fill="#C6E9C0"/>
+  <!-- front feet -->
+  <circle cx="36" cy="84" r="6" fill="#2E7D3A"/>
+  <circle cx="64" cy="84" r="6" fill="#2E7D3A"/>
+  <!-- eyes -->
+  <circle cx="34" cy="26" r="14" fill="#3FA34D"/>
+  <circle cx="66" cy="26" r="14" fill="#3FA34D"/>
+  <circle cx="34" cy="24" r="9" fill="#fff"/>
+  <circle cx="66" cy="24" r="9" fill="#fff"/>
+  <circle cx="36" cy="26" r="4.5" fill="#244235" class="eye-l"/>
+  <circle cx="64" cy="26" r="4.5" fill="#244235" class="eye-r"/>
+  <!-- smile -->
+  <path d="M38 58 Q50 68 62 58" stroke="#244235" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- cheeks -->
+  <circle cx="32" cy="52" r="4" fill="#FF9E8E" opacity=".7"/>
+  <circle cx="68" cy="52" r="4" fill="#FF9E8E" opacity=".7"/>
+</svg>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="froglogo" id="logoSlot"></span> 뺄셈 점프</div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="soundBtn" aria-label="소리 켜기 끄기">🔊</button>
+    <button class="iconbtn" id="homeBtn" aria-label="처음 화면으로" hidden>🏠</button>
+  </div>
+
+  <!-- HOME -->
+  <section class="screen active" id="home">
+    <div class="hero">
+      <span class="froghero" id="heroSlot"></span>
+      <h1>깡총이와 뺄셈 점프</h1>
+      <p>수직선을 폴짝폴짝 밟으며 뺄셈을 배워요!</p>
+    </div>
+    <div class="stages" id="stageList"></div>
+    <p class="home-hint">🐸 1단계부터 차례대로 해보면 더 쉬워요!</p>
+  </section>
+
+  <!-- PLAY -->
+  <section class="screen" id="play">
+    <div class="play-head">
+      <span class="play-title" id="playTitle"></span>
+      <div class="progress" id="progress"></div>
+    </div>
+    <div id="stageArea"></div>
+  </section>
+
+  <!-- DONE -->
+  <section class="screen" id="done">
+    <div class="done-box">
+      <span class="froghero" id="doneSlot"></span>
+      <div class="done-stars" id="doneStars"></div>
+      <h2 id="doneTitle">참 잘했어요!</h2>
+      <p id="doneMsg"></p>
+      <div class="controls">
+        <button class="btn jump" id="againBtn">한 번 더 🐸</button>
+        <button class="btn go" id="nextStageBtn">다음 단계 →</button>
+        <button class="btn ghost" id="toHomeBtn">단계 고르기</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- frog svg helper ---------- */
+const frogSVG = document.getElementById('frog-template').outerHTML
+  .replace('id="frog-template"','').replace('style="display:none"','');
+function froggy(cls){
+  const s = frogSVG.replace('<svg ', '<svg class="'+cls+'" ');
+  return s;
+}
+document.getElementById('logoSlot').innerHTML = froggy('froglogo-svg');
+document.getElementById('heroSlot').innerHTML = froggy('froghero');
+document.getElementById('doneSlot').innerHTML = froggy('froghero');
+// size the small logo svg
+document.querySelector('.froglogo-svg').setAttribute('width','34');
+
+/* ---------- sound ---------- */
+let soundOn = true, audioCtx = null;
+function ac(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return audioCtx; }
+function beep(freqs, dur=0.12, type='sine', vol=0.18, gap=0.0){
+  if(!soundOn) return; const c = ac(); if(!c) return;
+  if(c.state==='suspended') c.resume();
+  let t = c.currentTime;
+  freqs.forEach((f,i)=>{
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.value=f;
+    o.connect(g); g.connect(c.destination);
+    const st=t+i*(dur+gap);
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(vol,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+dur);
+    o.start(st); o.stop(st+dur+0.02);
+  });
+}
+const sHop   = ()=>beep([520,360],0.13,'sine',0.16);
+const sCorrect=()=>beep([660,880,1180],0.13,'triangle',0.18,0.02);
+const sWrong = ()=>beep([200,150],0.16,'sine',0.16,0.02);
+const sStar  = ()=>beep([880,1320],0.1,'triangle',0.16,0.03);
+const soundBtn = document.getElementById('soundBtn');
+soundBtn.onclick = ()=>{ soundOn=!soundOn; soundBtn.textContent=soundOn?'🔊':'🔇'; if(soundOn) sStar(); };
+
+/* ---------- state ---------- */
+const PROBLEMS_PER_STAGE = 5;
+const stageInfo = {
+  1:{name:'10에서 점프!', ex:'10 - 3 = 7', badge:'🐸'},
+  2:{name:'0 아래로 점프!', ex:'5 - 7 = -2', badge:'❄️'},
+  3:{name:'10을 빌려요', ex:'15 - 7 = 8', badge:'🔟'},
+  4:{name:'자리별로 빼기', ex:'35 - 12 = 23', badge:'🧱'},
+};
+const starsByStage = {1:0,2:0,3:0,4:0};
+let state = { stage:1, idx:0, problems:[], solvedThisRound:0 };
+
+/* ---------- screen switching ---------- */
+function show(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
+  document.getElementById('homeBtn').hidden = (screen==='home');
+  window.scrollTo({top:0});
+}
+document.getElementById('homeBtn').onclick = ()=>{ renderHome(); show('home'); };
+
+/* ---------- home ---------- */
+function renderHome(){
+  const list = document.getElementById('stageList');
+  list.innerHTML='';
+  for(let s=1;s<=4;s++){
+    const info = stageInfo[s];
+    const card = document.createElement('button');
+    card.className='stage-card'; card.dataset.stage=s;
+    card.setAttribute('aria-label', s+'단계 '+info.name);
+    const filled = starsByStage[s];
+    let stars=''; for(let i=0;i<PROBLEMS_PER_STAGE;i++) stars += (i<filled?'⭐':'☆');
+    card.innerHTML =
+      '<div class="badge">'+info.badge+'</div>'+
+      '<h3>'+s+'단계 · '+info.name+'</h3>'+
+      '<div class="ex">예) '+info.ex.replace('=','<b>=</b>')+'</div>'+
+      '<div class="stars">'+stars+'</div>'+
+      '<div class="corner">'+info.badge+'</div>';
+    card.onclick = ()=>startStage(s);
+    list.appendChild(card);
+  }
+}
+
+/* ---------- problem generators ---------- */
+const ri = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+function makeProblem(stage){
+  if(stage===1){ const b=ri(1,9); return {type:'line', a:10, b, ans:10-b, min:0, max:10}; }
+  if(stage===2){ let a,b; do{ a=ri(1,9); b=ri(1,9); }while(a-b< -5); return {type:'line', a, b, ans:a-b, min:-5, max:9}; }
+  if(stage===3){ const o=ri(1,8); const N=10+o; const b=ri(o+1,9); return {type:'borrow', a:N, b, ones:o, ans:(10-b)+o}; }
+  // stage 4
+  const t1=ri(3,9), o1=ri(0,9), t2=ri(1,t1-1), o2=ri(0,9);
+  const a=t1*10+o1, b=t2*10+o2;
+  return {type:'place', a, b, t1, o1, t2, o2, tensRes:(t1-t2)*10, onesRes:o1-o2, ans:a-b};
+}
+function buildProblems(stage){
+  const arr=[]; let guard=0;
+  while(arr.length<PROBLEMS_PER_STAGE && guard++<200){
+    const p=makeProblem(stage);
+    if(arr.some(q=>q.a===p.a && q.b===p.b)) continue;
+    arr.push(p);
+  }
+  return arr;
+}
+// vertical column form (세로셈): top number, minus + bottom number, bar, answer
+function vColumnHTML(a, b){
+  return '<div class="vequation">'+
+    '<div class="vrow"><span class="vop"></span><span class="vnum">'+a+'</span></div>'+
+    '<div class="vrow"><span class="vop">−</span><span class="vnum sub">'+b+'</span></div>'+
+    '<div class="vbar"></div>'+
+    '<div class="vrow"><span class="vop"></span><span class="vnum ans blank">?</span></div>'+
+  '</div>';
+}
+
+/* ---------- start stage ---------- */
+function startStage(stage){
+  state = { stage, idx:0, problems:buildProblems(stage), solvedThisRound:0 };
+  document.getElementById('playTitle').textContent = stage+'단계 · '+stageInfo[stage].name;
+  show('play');
+  renderProgress();
+  renderProblem();
+}
+function renderProgress(){
+  const p=document.getElementById('progress'); p.innerHTML='';
+  for(let i=0;i<PROBLEMS_PER_STAGE;i++){
+    const d=document.createElement('div'); d.className='dot';
+    if(i<state.idx) d.classList.add('done');
+    if(i===state.idx) d.classList.add('cur');
+    p.appendChild(d);
+  }
+}
+
+/* ---------- render current problem ---------- */
+function renderProblem(){
+  const p = state.problems[state.idx];
+  const area = document.getElementById('stageArea');
+  area.innerHTML='';
+  if(p.type==='line') renderLine(p, area);
+  else if(p.type==='borrow') renderBorrow(p, area);
+  else renderPlace(p, area);
+}
+
+/* ===== NUMBER LINE (stage 1 & 2) ===== */
+function renderLine(p, area){
+  const eq = document.createElement('div');
+  eq.className='equation';
+  eq.innerHTML='<span class="num">'+p.a+'</span> <span class="op">−</span> <span class="num sub">'+p.b+'</span> <span class="op">=</span> <span class="num ans blank">?</span>';
+  area.appendChild(eq);
+
+  const hint = document.createElement('div');
+  hint.className='hint';
+  hint.innerHTML='개구리를 <b>'+p.b+'칸</b> 뒤로 점프시켜 어디에 도착하는지 세어 봐요!';
+  area.appendChild(hint);
+
+  const wrap = document.createElement('div'); wrap.className='nl-wrap';
+  const nl = document.createElement('div'); nl.className='numberline';
+  const track = document.createElement('div'); track.className='nl-track'; nl.appendChild(track);
+  const pads=[];
+  for(let v=p.min; v<=p.max; v++){
+    const isStart = (v===p.a);
+    const pad=document.createElement('div');
+    pad.className='pad'+(v===0?' zero':'')+(isStart?' start':'');
+    pad.dataset.value=v;
+    pad.innerHTML='<div class="lily"><span class="ripple"></span></div><div class="val num">'+v+'</div>'+
+      (isStart?'<span class="startflag">🚩 출발</span>':'');
+    nl.appendChild(pad); pads.push(pad);
+  }
+  const frogWrap=document.createElement('div'); frogWrap.className='frog-wrap';
+  frogWrap.innerHTML = froggy('frog-mini');
+  nl.appendChild(frogWrap);
+  wrap.appendChild(nl); area.appendChild(wrap);
+
+  // helper controls (frog hopping = a counting aid)
+  const ctr=document.createElement('div'); ctr.className='counter';
+  ctr.innerHTML='🐸 개구리는 지금 <b id="posNow">'+p.a+'</b>에 있어요';
+  area.appendChild(ctr);
+  const controls=document.createElement('div'); controls.className='controls';
+  controls.innerHTML =
+    '<button class="btn jump" id="jumpBtn">뒤로 점프 −1</button>'+
+    '<button class="btn fwd" id="fwdBtn">앞으로 +1</button>'+
+    '<button class="btn ghost" id="resetBtn">다시 ↺</button>';
+  area.appendChild(controls);
+
+  // answer choices
+  const pick=document.createElement('div'); pick.className='hint'; pick.style.marginTop='18px';
+  pick.innerHTML='정답은 몇일까요? 아래에서 골라요 👇';
+  area.appendChild(pick);
+  const choiceWrap=document.createElement('div'); choiceWrap.className='choices line-choices';
+  area.appendChild(choiceWrap);
+
+  // ---- frog movement: ONE Web Animation per hop (horizontal + arc together) ----
+  // This guarantees the jump motion replays on every hop (not just the first).
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let cur = p.a, locked = false, curX = 0;
+  const frog = frogWrap.querySelector('.frog-mini');
+  function padFor(v){ return pads[v - p.min]; }
+  function xFor(v){
+    const pad = padFor(v);
+    // frogWrap is a div (SVG elements report undefined offsetWidth -> NaN), so measure the wrapper
+    const fw = frogWrap.offsetWidth || 56;
+    return pad.offsetLeft + pad.offsetWidth/2 - fw/2;
+  }
+  function lite(v, scroll){
+    pads.forEach(pd=>pd.classList.remove('lit'));
+    const pad = padFor(v); pad.classList.add('lit');
+    if(scroll) pad.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+  }
+  function placeInstant(v){
+    curX = xFor(v);
+    frogWrap.style.transform = 'translate('+curX+'px,0)';
+    lite(v, false);
+  }
+  function leap(v){
+    const fromX = curX, toX = xFor(v), midX = (fromX+toX)/2;
+    lite(v, true);
+    frogWrap.style.transform = 'translate('+toX+'px,0)';   // resting state after anim
+    if(!reduceMotion){
+      frogWrap.animate([
+        {transform:'translate('+fromX+'px,0) scale(1,1)'},
+        {transform:'translate('+fromX+'px,2px) scale(1.10,.84)', offset:.12},
+        {transform:'translate('+midX+'px,-48px) scale(.92,1.14)', offset:.5},
+        {transform:'translate('+toX+'px,2px) scale(1.08,.9)', offset:.88},
+        {transform:'translate('+toX+'px,0) scale(1,1)'}
+      ], {duration:440, easing:'ease-in-out'});
+    }
+    curX = toX;
+  }
+  function ripple(v){
+    const rip = padFor(v).querySelector('.ripple');
+    rip.classList.remove('go'); void rip.offsetWidth; rip.classList.add('go');
+  }
+  // initial placement once layout has settled
+  requestAnimationFrame(()=>requestAnimationFrame(()=>placeInstant(cur)));
+
+  function showPos(){ const el=document.getElementById('posNow'); if(el) el.textContent=cur; }
+  // one step at a time: backward = number -1, forward = number +1 (stays between line min and the start number)
+  function step(dir){
+    if(locked) return;
+    const next = cur + dir;
+    if(next < p.min || next > p.a) return;
+    cur = next;
+    leap(cur); sHop(); showPos();
+    setTimeout(()=>ripple(cur), 250);
+  }
+  document.getElementById('jumpBtn').onclick = ()=>step(-1);
+  document.getElementById('fwdBtn').onclick  = ()=>step(+1);
+  frog.style.cursor='pointer'; frog.onclick = ()=>step(-1);
+
+  document.getElementById('resetBtn').onclick = ()=>{
+    if(locked) return;
+    cur = p.a; leap(cur); showPos();
+  };
+
+  // ---- 6 answer choices ----
+  function lineChoices(correct, min, max){
+    const set=new Set([correct]); let guard=0;
+    while(set.size<6 && guard++<300){
+      const cand = correct + (Math.random()<.5?-1:1)*ri(1,4);
+      if(cand>=min && cand<=max) set.add(cand);
+    }
+    let v=min; while(set.size<6 && v<=max){ set.add(v); v++; }
+    return [...set].sort(()=>Math.random()-.5);
+  }
+  lineChoices(p.ans, p.min, p.max).forEach(val=>{
+    const b=document.createElement('button');
+    b.className='choice num'; b.textContent=val;
+    b.onclick=()=>{
+      if(locked) return;
+      if(val===p.ans){
+        locked=true;
+        b.classList.add('right');
+        choiceWrap.querySelectorAll('.choice').forEach(x=>x.disabled=true);
+        eq.querySelector('.ans').className='num ans';
+        eq.querySelector('.ans').textContent=p.ans;
+        pick.innerHTML='🎉 딩동댕! <b>'+p.a+' − '+p.b+' = '+p.ans+'</b>';
+        // reward: frog leaps over to the answer lily pad
+        cur=p.ans; leap(cur); showPos(); setTimeout(()=>ripple(p.ans),250);
+        sCorrect();
+        finishProblem();
+      } else {
+        sWrong();
+        b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
+        hint.innerHTML='음~ 개구리로 다시 한 번 세어 볼까요? 🐸';
+      }
+    };
+    choiceWrap.appendChild(b);
+  });
+}
+
+/* ===== BORROW method (stage 3): 15 - 7 ===== */
+function renderBorrow(p, area){
+  const eq=document.createElement('div'); eq.className='equation';
+  eq.innerHTML=vColumnHTML(p.a, p.b);
+  area.appendChild(eq);
+
+  const steps=document.createElement('div'); steps.className='steps';
+  // step 1: split
+  const s1=document.createElement('div'); s1.className='step active';
+  s1.innerHTML =
+    '<div class="label"><span class="no">1</span> 큰 수를 나누기</div>'+
+    '<div class="talk">'+p.a+'은(는) <b>10</b>과 <b>'+p.ones+'</b>로 나눌 수 있어요.</div>'+
+    '<div class="blocks"><span class="chip ten">10</span><span class="chip plus">＋</span><span class="chip one">'+p.ones+'</span></div>'+
+    '<div class="choices"><button class="btn go" id="s1next">좋아요! 👍</button></div>';
+  steps.appendChild(s1);
+
+  // step 2: 10 - b
+  const r1 = 10 - p.b;
+  const s2=document.createElement('div'); s2.className='step';
+  s2.innerHTML =
+    '<div class="label"><span class="no">2</span> 10에서 빼기</div>'+
+    '<div class="talk"><b>'+p.ones+'</b>은(는) <b>'+p.b+'</b>보다 작아요. 그래서 <b>10</b>에서 빼요!</div>'+
+    '<div class="eqline"><span class="num">10</span> <span class="op">−</span> <span class="num">'+p.b+'</span> <span class="op">=</span> <span class="slot empty num" id="slot1">?</span></div>'+
+    '<div class="choices" id="ch1"></div>';
+  steps.appendChild(s2);
+
+  // step 3: r1 + ones
+  const s3=document.createElement('div'); s3.className='step';
+  s3.innerHTML =
+    '<div class="label"><span class="no">3</span> 남은 수와 더하기</div>'+
+    '<div class="talk">남은 <b id="leftnum">'+r1+'</b>와(과) 나눠둔 <b>'+p.ones+'</b>를 더해요.</div>'+
+    '<div class="eqline"><span class="block" id="r1show">'+r1+'</span> <span class="op">＋</span> <span class="block">'+p.ones+'</span> <span class="op">=</span> <span class="slot empty num" id="slot2">?</span></div>'+
+    '<div class="choices" id="ch2"></div>';
+  steps.appendChild(s3);
+  area.appendChild(steps);
+
+  saying(area,'10을 빌려서 빼면 쉬워요!');
+
+  document.getElementById('s1next').onclick = ()=>{
+    s1.classList.add('solved'); s1.classList.remove('active');
+    s2.classList.add('active'); sCorrect();
+    s2.scrollIntoView({block:'center',behavior:'smooth'});
+  };
+
+  buildChoices('ch1', r1, false, ()=>{
+    document.getElementById('slot1').textContent=r1;
+    document.getElementById('slot1').classList.remove('empty');
+    s2.classList.add('solved'); s2.classList.remove('active');
+    s3.classList.add('active');
+    s3.scrollIntoView({block:'center',behavior:'smooth'});
+  });
+  buildChoices('ch2', p.ans, false, ()=>{
+    document.getElementById('slot2').textContent=p.ans;
+    document.getElementById('slot2').classList.remove('empty');
+    s3.classList.add('solved'); s3.classList.remove('active');
+    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
+    finishProblem();
+  });
+}
+
+/* ===== PLACE VALUE (stage 4): 35 - 12 ===== */
+function renderPlace(p, area){
+  const eq=document.createElement('div'); eq.className='equation';
+  eq.innerHTML=vColumnHTML(p.a, p.b);
+  area.appendChild(eq);
+
+  const steps=document.createElement('div'); steps.className='steps';
+
+  // step1 tens
+  const s1=document.createElement('div'); s1.className='step active';
+  s1.innerHTML=
+    '<div class="label"><span class="no">1</span> 십의 자리부터 빼기</div>'+
+    '<div class="talk">앞의 큰 자리(십)를 먼저 빼요.</div>'+
+    '<div class="eqline"><span class="num">'+(p.t1*10)+'</span> <span class="op">−</span> <span class="num">'+(p.t2*10)+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot1">?</span></div>'+
+    '<div class="choices" id="pc1"></div>';
+  steps.appendChild(s1);
+
+  // step2 ones (can be negative)
+  const s2=document.createElement('div'); s2.className='step';
+  s2.innerHTML=
+    '<div class="label"><span class="no">2</span> 일의 자리 빼기</div>'+
+    '<div class="talk">이제 일의 자리를 빼요.'+(p.onesRes<0?' <b>모자라면 음수</b>가 돼요!':'')+'</div>'+
+    '<div class="eqline"><span class="num">'+p.o1+'</span> <span class="op">−</span> <span class="num">'+p.o2+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot2">?</span></div>'+
+    '<div class="choices" id="pc2"></div>';
+  steps.appendChild(s2);
+
+  // step3 combine — carry the two answers found above down into blocks
+  const s3=document.createElement('div'); s3.className='step';
+  s3.innerHTML=
+    '<div class="label"><span class="no">3</span> 합치기</div>'+
+    '<div class="talk">위에서 구한 두 블록 <b>'+p.tensRes+'</b>과(와) <b>'+p.onesRes+'</b>을(를) 합치면 끝!</div>'+
+    '<div class="eqline"><span class="block">'+p.tensRes+'</span> <span class="op">＋</span> <span class="block">'+p.onesRes+'</span> <span class="op">=</span> <span class="slot empty num" id="pslot3">?</span></div>'+
+    '<div class="choices" id="pc3"></div>';
+  steps.appendChild(s3);
+  area.appendChild(steps);
+
+  saying(area,'큰 자리부터 빼면 머릿속으로도 쉬워요!');
+
+  buildChoices('pc1', p.tensRes, false, ()=>{
+    setSlot('pslot1', p.tensRes); next(s1,s2);
+  });
+  buildChoices('pc2', p.onesRes, true, ()=>{
+    setSlot('pslot2', p.onesRes); next(s2,s3);
+  });
+  buildChoices('pc3', p.ans, false, ()=>{
+    setSlot('pslot3', p.ans);
+    s3.classList.add('solved'); s3.classList.remove('active');
+    const aEl=eq.querySelector('.ans'); aEl.classList.remove('blank'); aEl.textContent=p.ans;
+    finishProblem();
+  });
+
+  function setSlot(id,val){ const el=document.getElementById(id); el.textContent=val; el.classList.remove('empty'); }
+  function next(a,b){ a.classList.add('solved'); a.classList.remove('active'); b.classList.add('active'); b.scrollIntoView({block:'center',behavior:'smooth'}); }
+}
+
+/* ---------- choice buttons ---------- */
+function buildChoices(containerId, correct, allowNeg, onCorrect){
+  const wrap=document.getElementById(containerId);
+  const opts=new Set([correct]);
+  let guard=0;
+  while(opts.size<3 && guard++<50){
+    let d = correct + (Math.random()<.5?-1:1)*ri(1,3);
+    if(!allowNeg && d<0) d=Math.abs(d)+1;
+    if(d===correct) continue;
+    opts.add(d);
+  }
+  const arr=[...opts].sort(()=>Math.random()-.5);
+  let done=false;
+  arr.forEach(v=>{
+    const b=document.createElement('button');
+    b.className='choice num'; b.textContent=v;
+    b.onclick=()=>{
+      if(done) return;
+      if(v===correct){
+        done=true; b.classList.add('right'); sCorrect();
+        wrap.querySelectorAll('.choice').forEach(x=>x.disabled=true);
+        setTimeout(onCorrect, 280);
+      } else {
+        sWrong(); b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
+      }
+    };
+    wrap.appendChild(b);
+  });
+}
+
+/* ---------- mascot speech ---------- */
+function saying(area, text){
+  const d=document.createElement('div'); d.className='saying';
+  d.innerHTML='<span class="froglil">'+froggy('frog-mini')+'</span><span class="bubble">'+text+'</span>';
+  area.appendChild(d);
+  d.querySelector('.frog-mini').style.width='60px';
+}
+
+/* ---------- finish a problem ---------- */
+function finishProblem(){
+  state.solvedThisRound++;
+  // light up progress dot
+  const dots=document.querySelectorAll('#progress .dot');
+  if(dots[state.idx]){ dots[state.idx].classList.add('done'); dots[state.idx].classList.remove('cur'); }
+  sStar();
+  burst(14);
+  // advance
+  setTimeout(()=>{
+    state.idx++;
+    if(state.idx>=PROBLEMS_PER_STAGE){ finishStage(); }
+    else { renderProgress(); renderProblem(); }
+  }, 1100);
+}
+
+/* ---------- finish stage ---------- */
+function finishStage(){
+  starsByStage[state.stage] = Math.max(starsByStage[state.stage], state.solvedThisRound);
+  const stars = state.solvedThisRound;
+  let starStr=''; for(let i=0;i<PROBLEMS_PER_STAGE;i++) starStr += (i<stars?'⭐':'☆');
+  document.getElementById('doneStars').textContent=starStr;
+  const msgs=['수직선 점프 최고!','뺄셈 박사님이 다 됐네요!','깡총이가 신났어요!','정말 멋져요!'];
+  document.getElementById('doneTitle').textContent = state.stage+'단계 완성! 🎉';
+  document.getElementById('doneMsg').textContent = msgs[Math.floor(Math.random()*msgs.length)];
+  const nextBtn=document.getElementById('nextStageBtn');
+  nextBtn.style.display = state.stage<4 ? '' : 'none';
+  show('done'); burst(40);
+}
+document.getElementById('againBtn').onclick = ()=>startStage(state.stage);
+document.getElementById('nextStageBtn').onclick = ()=>startStage(Math.min(4,state.stage+1));
+document.getElementById('toHomeBtn').onclick = ()=>{ renderHome(); show('home'); };
+
+/* ---------- confetti ---------- */
+function burst(n){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer=document.getElementById('confetti');
+  const colors=['#FFCC4D','#FF7E6B','#3FA34D','#6C8CD5','#8FD18C'];
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div'); c.className='conf';
+    const x=Math.random()*100;
+    c.style.left=x+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.transform='rotate('+(Math.random()*360)+'deg)';
+    layer.appendChild(c);
+    const dur=1400+Math.random()*900;
+    const drift=(Math.random()*120-60);
+    c.animate([
+      {transform:'translate(0,-20px) rotate(0deg)',opacity:1},
+      {transform:'translate('+drift+'px, 100vh) rotate('+(Math.random()*720)+'deg)',opacity:.9}
+    ],{duration:dur,easing:'cubic-bezier(.3,.6,.5,1)'}).onfinish=()=>c.remove();
+  }
+}
+
+/* ---------- init ---------- */
+renderHome();
+</script>
+</body>
+</html>
